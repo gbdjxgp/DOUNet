@@ -25,8 +25,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='MMDet test (and eval) a model')
     parser.add_argument('config', help='test config file path')
-    parser.add_argument('id', help='str id')
-    parser.add_argument('--checkpoint', help='checkpoint file')
+    parser.add_argument('checkpoint', help='checkpoint file')
     parser.add_argument(
         '--work-dir',
         help='the directory to save the file containing evaluation metrics')
@@ -47,7 +46,7 @@ def parse_args():
         action='store_true',
         help='Format the output results without perform evaluation. It is'
         'useful when you want to format the result to a specific format and '
-        'submit it to the test server',default=True)
+        'submit it to the test server')
     parser.add_argument(
         '--eval',
         type=str,
@@ -85,7 +84,7 @@ def parse_args():
         nargs='+',
         action=DictAction,
         help='custom options for evaluation, the key-value pair in xxx=yyy '
-        'format will be kwargs for dataset.evaluate() function',default={'submission_dir': None})
+        'format will be kwargs for dataset.evaluate() function')
     parser.add_argument(
         '--launcher',
         choices=['none', 'pytorch', 'slurm', 'mpi'],
@@ -101,14 +100,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    # print(args)
-    if args.checkpoint is None:
-        args.checkpoint = '.\\work_dirs\\'+args.config.split("\\")[-1].split(".")[-2]+"\\epoch_12.pth"
 
-    if args.eval_options['submission_dir'] is None:
-        args.eval_options['submission_dir'] =f"work_dirs/3090/zdx/{args.id}"
-    print(args)
-    # quit()
     assert args.out or args.eval or args.format_only or args.show \
         or args.show_dir, \
         ('Please specify at least one operation (save/eval/format/show the '

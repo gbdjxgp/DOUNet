@@ -1,5 +1,5 @@
 _base_ = [
-    '../_base_/datasets/dotav1.py', '../_base_/schedules/schedule_1x.py',
+    '../_base_/datasets/dotav1_ms.py', '../_base_/schedules/schedule_1x.py',
     '../_base_/default_runtime.py'
 ]
 
@@ -158,6 +158,6 @@ data = dict(
 optimizer = dict(
     _delete_=True,
     type='AdamW',
-    lr=0.0002, #/8*gpu_number,
+    lr=0.00005, #/8*gpu_number,
     betas=(0.9, 0.999),
     weight_decay=0.05)

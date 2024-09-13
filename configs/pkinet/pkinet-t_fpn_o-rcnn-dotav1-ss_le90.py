@@ -1,24 +1,42 @@
 _base_ = [
-    '../_base_/datasets/dotav1.py', '../_base_/schedules/schedule_1x.py',
-    '../_base_/default_runtime.py'
+    '../_base_/default_runtime.py', '../_base_/schedules/schedule_30e.py',
+    '../_base_/datasets/dotav1.py'
 ]
 
+project_dir = '{{fileBasenameNoExtension}}'  # TODO change
+work_dir = f'./work_dirs/{project_dir}'
+
+num_classes = 15
+bs = 4  # batch_size
+num_workers = bs * 4
+base_lr = 0.00005
+
+save_interval = 1
+val_interval = 3
+max_keep_ckpts = 3  # TODO change
+
+# base_batch_size = (4 GPUs) x (2 samples per GPU)
+auto_scale_lr = dict(base_batch_size=8, enable=False)
+
+checkpoint = 'data/pretrained/pkinet_t_pretrain.pth'  # pretrain # noqa
+# load_from = ''  # resume # noqa
+
+# model settings
 angle_version = 'le90'
-gpu_number = 8
-# fp16 = dict(loss_scale='dynamic')
 model = dict(
     type='OrientedRCNN',
     backbone=dict(
-        type='LSKNet',
-        embed_dims=[32, 64, 160, 256],
-        drop_rate=0.1,
+        type='PKINet',
+        arch='T',
         drop_path_rate=0.1,
-        depths=[3, 3, 5, 2],
-        init_cfg=dict(type='Pretrained', checkpoint="./data/pretrained/lsk_t_backbone.pth.tar"),
-        norm_cfg=dict(type='BN', requires_grad=True)),
+        out_indices=(1, 2, 3, 4),
+        norm_cfg=dict(type='SyncBN', requires_grad=True),
+        act_cfg=dict(type='SiLU'),
+        init_cfg=dict(type='Pretrained', prefix='backbone.', checkpoint=checkpoint),
+    ),
     neck=dict(
         type='FPN',
-        in_channels=[32, 64, 160, 256],
+        in_channels=[32, 64, 128, 256],
         out_channels=256,
         num_outs=5),
     rpn_head=dict(
@@ -36,10 +54,8 @@ model = dict(
             angle_range=angle_version,
             target_means=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             target_stds=[1.0, 1.0, 1.0, 1.0, 0.5, 0.5]),
-        loss_cls=dict(
-            type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
-        loss_bbox=dict(
-            type='SmoothL1Loss', beta=0.1111111111111111, loss_weight=1.0)),
+        loss_cls=dict(type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
+        loss_bbox=dict(type='SmoothL1Loss', beta=0.1111111111111111, loss_weight=1.0)),
     roi_head=dict(
         type='OrientedStandardRoIHead',
         bbox_roi_extractor=dict(
@@ -56,7 +72,7 @@ model = dict(
             in_channels=256,
             fc_out_channels=1024,
             roi_feat_size=7,
-            num_classes=15,
+            num_classes=num_classes,
             bbox_coder=dict(
                 type='DeltaXYWHAOBBoxCoder',
                 angle_range=angle_version,
@@ -66,8 +82,7 @@ model = dict(
                 target_means=(.0, .0, .0, .0, .0),
                 target_stds=(0.1, 0.1, 0.2, 0.2, 0.1)),
             reg_class_agnostic=True,
-            loss_cls=dict(
-                type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
+            loss_cls=dict(type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
             loss_bbox=dict(type='SmoothL1Loss', beta=1.0, loss_weight=1.0))),
     train_cfg=dict(
         rpn=dict(
@@ -135,22 +150,16 @@ train_pipeline = [
         flip_ratio=[0.25, 0.25, 0.25],
         direction=['horizontal', 'vertical', 'diagonal'],
         version=angle_version),
-    dict(
-        type='PolyRandomRotate',
-        rotate_ratio=0.5,
-        angles_range=180,
-        auto_bound=False,
-        rect_classes=[9, 11],
-        version=angle_version),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='Pad', size_divisor=32),
     dict(type='DefaultFormatBundle'),
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels'])
 ]
 
+# batch_size = (4 GPUs) x (2 samples per GPU) = 8
 data = dict(
-    samples_per_gpu=2,
-    workers_per_gpu=2,
+    samples_per_gpu=bs,
+    workers_per_gpu=num_workers,
     train=dict(pipeline=train_pipeline, version=angle_version),
     val=dict(version=angle_version),
     test=dict(version=angle_version))
@@ -158,6 +167,13 @@ data = dict(
 optimizer = dict(
     _delete_=True,
     type='AdamW',
-    lr=0.0002, #/8*gpu_number,
+    lr=base_lr,
     betas=(0.9, 0.999),
-    weight_decay=0.05)
+    weight_decay=0.05,
+    paramwise_cfg=dict(norm_decay_mult=0, bias_decay_mult=0, bypass_duplicate=True),
+)
+
+# evaluation
+evaluation = dict(interval=val_interval, metric='mAP', save_best='mAP')
+runner = dict(type='EpochBasedRunner', max_epochs=30)
+checkpoint_config = dict(interval=save_interval, max_keep_ckpts=max_keep_ckpts)

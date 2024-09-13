@@ -4,7 +4,7 @@ _base_ = [
 ]
 
 angle_version = 'le90'
-gpu_number = 8
+gpu_number = 1
 # fp16 = dict(loss_scale='dynamic')
 model = dict(
     type='OrientedRCNN',
@@ -158,6 +158,6 @@ data = dict(
 optimizer = dict(
     _delete_=True,
     type='AdamW',
-    lr=0.0002, #/8*gpu_number,
+    lr=0.00005, #/8*gpu_number,
     betas=(0.9, 0.999),
     weight_decay=0.05)

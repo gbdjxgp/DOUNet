@@ -1,6 +1,6 @@
 # dataset settings
 dataset_type = 'DOTADataset'
-data_root = "data/split_ss_dota/"
+data_root = "./data/split_ms_dota/"
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 train_pipeline = [
@@ -37,16 +37,11 @@ data = dict(
         pipeline=train_pipeline),
     val=dict(
         type=dataset_type,
-        ann_file=data_root + 'val/annfiles/',
-        img_prefix=data_root + 'val/images/',
+        ann_file=data_root + 'trainval/annfiles/',
+        img_prefix=data_root + 'trainval/images/',
         pipeline=test_pipeline),
-    # test=dict(
-    #     type=dataset_type,
-    #     ann_file=data_root + 'trainval/annfiles/',
-    #     img_prefix=data_root + 'trainval/images/',
-    #     pipeline=test_pipeline))
     test=dict(
         type=dataset_type,
-        ann_file=data_root + 'test/images/',
-        img_prefix=data_root + 'test/images/',
+        ann_file=data_root + 'trainval/annfiles/',
+        img_prefix=data_root + 'trainval/images/',
         pipeline=test_pipeline))

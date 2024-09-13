@@ -19,6 +19,18 @@ from mmrotate.apis import train_detector
 from mmrotate.datasets import build_dataset
 from mmrotate.models import build_detector
 from mmrotate.utils import collect_env, get_root_logger, setup_multi_processes
+# add
+def select_training_param(model, training_params=['fc_cls', 'fc_reg', 'rpn', 'mask_head']):
+    for name, param in model.named_parameters():
+        frozen_flag = True
+        for p in training_params:
+            if p in name:
+                frozen_flag = False
+                break
+        if frozen_flag:
+            param.requires_grad = False
+
+    return model
 
 
 def parse_args():
@@ -176,6 +188,16 @@ def main():
         cfg.checkpoint_config.meta = dict(
             mmdet_version=__version__ + get_git_hash()[:7],
             CLASSES=datasets[0].CLASSES)
+
+
+
+    # add
+    tune_part = cfg.get('selectp', 0)
+    if tune_part == 1:
+        logger.info('fine-tune fc_cls, fc_reg, rpn and mask_head.')
+        model = select_training_param(model, ['fc_cls', 'fc_reg', 'rpn', 'mask_head'])
+
+
     # add an attribute for visualization convenience
     model.CLASSES = datasets[0].CLASSES
     train_detector(
