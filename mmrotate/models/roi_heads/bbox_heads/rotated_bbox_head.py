@@ -319,7 +319,7 @@ class RotatedBBoxHead(BaseModule):
                     losses.update(loss_cls_)
                 else:
                     losses['loss_cls'] = loss_cls_
-                if self.custom_activation:
+                if self.custom_accuracy:
                     acc_ = self.loss_cls.get_accuracy(cls_score, labels)
                     losses.update(acc_)
                 else:

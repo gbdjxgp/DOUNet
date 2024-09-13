@@ -3,6 +3,7 @@ import glob
 import os
 import os.path as osp
 import re
+import shutil
 import tempfile
 import time
 import zipfile
@@ -263,8 +264,12 @@ class DOTADataset(CustomDataset):
             out_folder (str, optional): Folder of submission.
         """
         if osp.exists(out_folder):
-            raise ValueError(f'The out_folder should be a non-exist path, '
-                             f'but {out_folder} is existing')
+            if input(f'The out_folder should be a non-exist path, '
+                             f'but {out_folder} is existing')=='Y':
+                shutil.rmtree(out_folder)
+            else:
+                raise ValueError(f'The out_folder should be a non-exist path, '
+                                 f'but {out_folder} is existing')
         os.makedirs(out_folder)
 
         files = [
